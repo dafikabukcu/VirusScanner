@@ -14,7 +14,7 @@ load_dotenv()
 
 VIRUSTOTAL_API_KEY = os.getenv("VIRUSTOTAL_API_KEY")
 VIRUSTOTAL_API_URL = os.getenv("VIRUSTOTAL_API_URL")
-
+VIRUSTOTAL_API_URL_SCAN = os.getenv("VIRUSTOTAL_API_URL_SCAN")
 class Colors:
     BLUE = '\033[94m'
     GREEN = '\033[92m'
@@ -60,20 +60,20 @@ class VirusScanner:
         response = requests.post(upload_url, headers=self.headers, files=files)
         if response.status_code == 200:
             result = response.json()
-            self.file_id = result.get("data").get("id")
-            print(Colors.YELLOW + f"[i] FileID: {self.file_id}" + Colors.END)
+            self.id = result.get("data").get("id")
+            print(Colors.YELLOW + f"[i] FileID: {self.id}" + Colors.END)
             print(Colors.GREEN + f"[i] Upload Successful!" + Colors.END)
         elif response.status_code == 409:
             error = response.json().get("error", {})
-            self.file_id = error.get("resource", {}).get("id")
-            print(Colors.YELLOW + f"[i] File Already Exists! FileID: {self.file_id}" + Colors.END)
+            self.id = error.get("resource", {}).get("id")
+            print(Colors.YELLOW + f"[i] File Already Exists! FileID: {self.id}" + Colors.END)
         else:
             print(Colors.RED + f"[-] Upload for {fileName} Failed! Status Code: {response.status_code}")
             sys.exit()
 
     def analyze(self):
         print(Colors.BLUE+"[+] Getting Analysis Report..." + Colors.END)
-        analysis_url = VIRUSTOTAL_API_URL + f"analyses/{self.file_id}"
+        analysis_url = VIRUSTOTAL_API_URL + f"analyses/{self.id}"
         response = requests.get(analysis_url, headers=self.headers)
         if response.status_code == 200:
             result = response.json()
@@ -104,10 +104,18 @@ class VirusScanner:
                 sys.exit()
             elif status == "queued":
                 print(Colors.YELLOW + "[i] Analysis Queued. Please Wait..." + Colors.END)
-                with open(os.path.abspath(self.file_path), "rb") as file:
-                    binary = file.read()
-                    hashsum = hashlib.sha256(binary).hexdigest()
-                    self.info(hashsum)
+                #with open(os.path.abspath(self.file_path), "rb") as file:
+                #    binary = file.read()
+                #    hashsum = hashlib.sha256(binary).hexdigest()
+                #    self.info(hashsum)
+                while True:
+                    resp = requests.get(analysis_url, headers=self.headers)
+                    resp.raise_for_status()
+                    status = resp.json()["data"]["attributes"]["status"]
+                    if status == "completed":
+                        return self.analyze()
+                    print(Colors.YELLOW + "[i] Still queued, retrying in 5s…" + Colors.END)
+                    time.sleep(5)
             else:
                 print(Colors.RED + "[-] Analysis Failed! Status Code: " + response.status_code + Colors.END)
                 sys.exit()
@@ -115,6 +123,21 @@ class VirusScanner:
     def run(self, file_path):
         self.upload(file_path)
         self.analyze()
+
+    def run_url(self, url):
+        headers = {
+            "x-apikey": VIRUSTOTAL_API_KEY,
+            "accept": "application/json",
+            "content-type": "application/x-www-form-urlencoded",
+        }
+        print (Colors.BLUE + "[+] URL To Be Scanned: "+ url + Colors.END)
+        response = requests.post(VIRUSTOTAL_API_URL_SCAN, headers=headers, data={"url": url})
+        if response.status_code == 200:
+            result = response.json()
+            self.id = result.get("data", {}).get("id")
+            print(Colors.YELLOW + f"[i] URL: {self.id}" + Colors.END)
+            print(Colors.GREEN + f"[i] URL Upload Successful!" + Colors.END)
+            self.analyze()
             
     def info(self, file_hash):
         print(Colors.BLUE+f" [i] Got file info by ID: "+file_hash+Colors.END)
@@ -156,9 +179,22 @@ class VirusScanner:
             sys.exit()
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('-m', '--malw', required = True, help ='Provide file path for analysis')
+    #parser.add_argument('-m', '--malw', required = True, help ='Provide file path for analysis')
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument(
+        "-m", "--malw",
+        help='Provide a file path for analysis'
+    )
+    group.add_argument(
+        "-u", "--url",
+        help='Provide a URL for analysis'
+    )
     args = vars(parser.parse_args())
     virusScanner = VirusScanner()
-    virusScanner.run(args["malw"])
+    #virusScanner.run(args["malw"])
+    if args["malw"]:
+        virusScanner.run(args["malw"])
+    else:
+        virusScanner.run_url(args["url"])
 
 

@@ -11,6 +11,7 @@ A simple command-line virus scanner powered by the VirusTotal API. It uploads fi
 - Create a .env file and add:
     - VIRUSTOTAL_API_KEY=your_api_key
     - VIRUSTOTAL_API_URL=https://www.virustotal.com/api/v3/
+    - VIRUSTOTAL_API_URL_SCAN=https://www.virustotal.com/api/v3/urls
 - Creating an environment is always recommended, up to you though.
 
 ## Usage
