@@ -100,7 +100,7 @@ class VirusScanner:
                 if maliciousFound:
                     print(Colors.RED+"[i] MALICIOUS CONTENT FOUND!"+Colors.END)
                 else:
-                    print(Colors.GREEN + "[i] Analysis Successfull! Everything is clean." + Colors.END)
+                    print(Colors.GREEN + "[i] Analysis Successful! Everything is clean." + Colors.END)
                 sys.exit()
             elif status == "queued":
                 print(Colors.YELLOW + "[i] Analysis Queued. Please Wait..." + Colors.END)
@@ -170,7 +170,7 @@ class VirusScanner:
                 if maliciousFound:
                     print(Colors.RED+"[i] MALICIOUS CONTENT FOUND!"+Colors.END)
                 else:
-                    print(Colors.GREEN + "[i] Analysis Successfull! Everything is clean." + Colors.END)
+                    print(Colors.GREEN + "[i] Analysis Successful! Everything is clean." + Colors.END)
                 sys.exit()
             else:
                 print(Colors.RED + f"[-] Analysis Failed! No last_analysis_results. Status Code: {response.status_code}"+ Colors.END)
